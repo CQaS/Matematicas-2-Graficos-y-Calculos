@@ -42,7 +42,7 @@ def mostrar_menu():
     tabla.add_row("[bold red]0[/bold red]", "[red]Salir del sistema[/red]")
 
     panel = Panel(tabla, border_style="bright_blue",
-                  title="Estadística", subtitle="Selecciona una opción [0-12]")
+                  title="Estadística", subtitle="Selecciona una opción [0-{}]".format(len(opciones)))
     console.print(panel, justify="center")  # 👈 centrado en la terminal
 
 

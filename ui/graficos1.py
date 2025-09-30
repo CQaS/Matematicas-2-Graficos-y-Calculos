@@ -10,7 +10,7 @@ def grafico_pastel():
     sistemas = ['Hogar', 'Servicios', 'Comidas', 'Supermercado']  # Categorías
     porcentajes = [73260, 34000, 24000, 123000]         	         # Valores
     colores = ['#fbf989', '#ff9999', '#99ff99', '#99bbff']          # Colores
-    explode = [0, 0, 0, 0.05]                                    # Separacion (Opc)
+    explode = [0, 0, 0, 0]                                  # Separacion (Opc)
 
     # Crear gráfico de pastel
     plt.figure(figsize=(8, 5))
