@@ -61,6 +61,11 @@ if __name__ == "__main__":
                                 "[red]\n⚠ Opción no válida. Intente de nuevo.[/red]\n", justify="center")
                             input("Presiona ENTER para continuar...")
 
+                    except Exception as e:
+                        console.print(
+                            f"[red]\n⚠ Error inesperado: {type(e).__name__} - {e}[/red]\n")
+                        input("Presiona ENTER para continuar...")
+
                     except ValueError:
                         console.print(
                             "[red]\n⚠ Entrada inválida. Ingrese un número.[/red]\n")
@@ -88,6 +93,11 @@ if __name__ == "__main__":
                             console.print(
                                 "[red]\n⚠ Opción no válida. Intente de nuevo.[/red]\n", justify="center")
                             input("Presiona ENTER para continuar...")
+
+                    except Exception as e:
+                        console.print(
+                            f"[red]\n⚠ Error inesperado: {type(e).__name__} - {e}[/red]\n")
+                        input("Presiona ENTER para continuar...")
 
                     except ValueError:
                         console.print(
@@ -117,6 +127,11 @@ if __name__ == "__main__":
                                 "[red]\n⚠ Opción no válida. Intente de nuevo.[/red]\n", justify="center")
                             input("Presiona ENTER para continuar...")
 
+                    except Exception as e:
+                        console.print(
+                            f"[red]\n⚠ Error inesperado: {type(e).__name__} - {e}[/red]\n")
+                        input("Presiona ENTER para continuar...")
+
                     except ValueError:
                         console.print(
                             "[red]\n⚠ Entrada inválida. Ingrese un número.[/red]\n")
@@ -127,10 +142,15 @@ if __name__ == "__main__":
                     "\n[bold red]Saliendo del sistema. ¡Hasta luego! ⏩[/bold red]\n", justify="center")
                 break
 
-            elif queVer < 0 or queVer > 2:
+            elif queVer < 0 or queVer > 3:
                 console.print(
                     "[red]\n⚠ Opción no válida. Intente de nuevo.[/red]\n", justify="center")
                 input("Presiona ENTER para continuar...")
+
+        except Exception as e:
+            console.print(
+                f"[red]\n⚠ Error inesperado: {type(e).__name__} - {e}[/red]\n")
+            input("Presiona ENTER para continuar...")
 
         except ValueError:
             console.print(
