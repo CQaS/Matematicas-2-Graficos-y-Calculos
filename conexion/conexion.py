@@ -1,4 +1,4 @@
-import mysql.connector
+""" import mysql.connector
 
 
 def get_conexion():
@@ -7,4 +7,17 @@ def get_conexion():
         user="root",
         password="",
         database="hr_db"
+    )
+ """
+
+import pyodbc
+
+
+def get_conexion():
+    return pyodbc.connect(
+        'DRIVER={ODBC Driver 17 for SQL Server};'
+        'SERVER=localhost\\SQLEXPRESS;'
+        'DATABASE=hr;'
+        'UID=sa;'
+        'PWD=SqlServer2025!;'
     )
