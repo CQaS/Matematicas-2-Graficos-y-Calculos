@@ -18,6 +18,5 @@ def get_conexion():
         'DRIVER={ODBC Driver 17 for SQL Server};'
         'SERVER=localhost\\SQLEXPRESS;'
         'DATABASE=hr;'
-        'UID=sa;'
-        'PWD=SqlServer2025!;'
+        'Trusted_Connection=yes;'
     )

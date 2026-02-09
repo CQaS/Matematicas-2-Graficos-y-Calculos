@@ -78,7 +78,10 @@ def grafico_barras():
     cursor.close()
     conexion.close()
 
-    df = pd.DataFrame(resultados, columns=["Departamento", "Salario Promedio"])
+    df = pd.DataFrame(
+        [(fila[0], float(fila[1])) for fila in resultados],
+        columns=["Departamento", "Salario Promedio"]
+    )
 
     plt.figure(figsize=(10, 6))
     plt.bar(df["Departamento"], df["Salario Promedio"],
@@ -103,10 +106,12 @@ def grafico_puntos():
 
     # Consulta: salarios redondeados en miles + frecuencia
     query = """
-        SELECT ROUND(salary, -3) AS salario_redondeado, COUNT(*) AS cantidad
+        SELECT 
+            ROUND(salary, -3) AS salario_redondeado,
+            COUNT(*) AS cantidad
         FROM employeess
-        GROUP BY salario_redondeado
-        ORDER BY salario_redondeado;
+        GROUP BY ROUND(salary, -3)
+        ORDER BY ROUND(salary, -3);
     """
     cursor.execute(query)
     resultados = cursor.fetchall()
@@ -114,9 +119,12 @@ def grafico_puntos():
     cursor.close()
     conexion.close()
 
-    df = pd.DataFrame(resultados, columns=["Salario", "Cantidad"])
+    df = pd.DataFrame(
+        [(float(r[0]), r[1]) for r in resultados],
+        columns=["Salario Redondeado", "Cantidad"]
+    )
 
-    unique_vals = df["Salario"].to_numpy()
+    unique_vals = df["Salario Redondeado"].to_numpy()
     counts = df["Cantidad"].to_numpy()
     y_coords = np.concatenate([np.arange(1, c + 1) for c in counts])
     x_coords = np.repeat(unique_vals, counts)
