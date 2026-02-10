@@ -7,13 +7,11 @@ from calendar import month_abbr
 from conexion.conexion import get_conexion
 
 # Gráfico de sectores(Pie chart) - pastel o torta
+# Genera un gráfico circular que muestra la distribución del gasto
+# total en salarios por cada departamento de la base de datos HR.
 
 
 def grafico_pastel():
-    """ # Datos
-    sistemas = ['Hogar', 'Servicios', 'Comidas', 'Supermercado']  # Categorías
-    porcentajes = [73260, 34000, 24000, 123000]         	         # Valores
-    colores = ['#fbf989', '#ff9999', '#99ff99', '#99bbff']          # Colores """
 
     conexion = get_conexion()
 
@@ -21,8 +19,10 @@ def grafico_pastel():
 
     # Consulta para obtener categorías y sus valores
     cursor.execute("""
-                SELECT job_title, max_salary
-                FROM jobss
+                SELECT d.department_name, SUM(e.salary)
+                FROM employeess e
+                JOIN departmentss d ON e.department_id = d.department_id
+                GROUP BY d.department_name
                 """)
 
     resultados = cursor.fetchall()
@@ -57,88 +57,95 @@ def grafico_pastel():
     plt.show()
 
 # Gráfico de barras
+# Genera un gráfico de barras comparativo que muestra el salario
+# promedio real por departamento, ordenado de mayor a menor.
 
 
 def grafico_barras():
 
     conexion = get_conexion()
-    cursor = conexion.cursor()
 
-    # Consulta SQL: salario promedio por departamento
+    # Mejora: Redondeamos a 2 decimales directamente en SQL
     query = """
-        SELECT d.department_name, AVG(e.salary) AS salario_promedio
+        SELECT d.department_name, ROUND(AVG(e.salary), 2) AS salario_promedio
         FROM employeess e
         JOIN departmentss d ON e.department_id = d.department_id
         GROUP BY d.department_name
         ORDER BY salario_promedio DESC;
     """
-    cursor.execute(query)
-    resultados = cursor.fetchall()
 
-    cursor.close()
+    # Sugerencia: Cargar directamente a DataFrame para simplificar
+    df = pd.read_sql(query, conexion)
     conexion.close()
 
-    df = pd.DataFrame(
-        [(fila[0], float(fila[1])) for fila in resultados],
-        columns=["Departamento", "Salario Promedio"]
-    )
-
     plt.figure(figsize=(10, 6))
-    plt.bar(df["Departamento"], df["Salario Promedio"],
-            color="skyblue", edgecolor="black")
 
-    plt.title("Salario promedio por Departamento",
+    # Mejora visual: Usar un degradado o color sólido profesional
+    barras = plt.bar(df["department_name"], df["salario_promedio"],
+                     color="steelblue", edgecolor="black")
+
+    # Personalización
+    plt.title("Salario Promedio por Departamento",
               fontsize=14, fontweight="bold")
     plt.xlabel("Departamento", fontsize=12)
     plt.ylabel("Salario Promedio (USD)", fontsize=12)
     plt.xticks(rotation=45, ha="right")
     plt.grid(axis="y", linestyle="--", alpha=0.7)
 
+    # Opcional: Agregar el valor numérico encima de cada barra
+    for barra in barras:
+        yval = barra.get_height()
+        plt.text(barra.get_x() + barra.get_width()/2, yval, f'${yval}',
+                 va='bottom', ha='center', fontsize=9)
+
     plt.tight_layout()
     plt.show()
 
-
 # Gráfico de puntos(Dot Plot)
+# Crea un diagrama de puntos que muestra la frecuencia de empleados
+# agrupados por rangos salariales redondeados a los mil dólares más cercanos.
+
 
 def grafico_puntos():
-    conexion = get_conexion()
-    cursor = conexion.cursor()
 
-    # Consulta: salarios redondeados en miles + frecuencia
+    conexion = get_conexion()
+
+    # Consulta: Agrupamos por miles para identificar tendencias de pago
     query = """
         SELECT 
-            ROUND(salary, -3) AS salario_redondeado,
+            CAST(ROUND(salary, -3) AS INT) AS salario_miles,
             COUNT(*) AS cantidad
         FROM employeess
         GROUP BY ROUND(salary, -3)
-        ORDER BY ROUND(salary, -3);
+        ORDER BY salario_miles;
     """
-    cursor.execute(query)
-    resultados = cursor.fetchall()
 
-    cursor.close()
+    # Usamos pandas para una carga más directa
+    df = pd.read_sql(query, conexion)
     conexion.close()
 
-    df = pd.DataFrame(
-        [(float(r[0]), r[1]) for r in resultados],
-        columns=["Salario Redondeado", "Cantidad"]
-    )
+    # Preparación de coordenadas para el efecto de "puntos apilados"
+    x_coords = np.repeat(df["salario_miles"], df["cantidad"])
+    y_coords = np.concatenate([np.arange(1, c + 1) for c in df["cantidad"]])
 
-    unique_vals = df["Salario Redondeado"].to_numpy()
-    counts = df["Cantidad"].to_numpy()
-    y_coords = np.concatenate([np.arange(1, c + 1) for c in counts])
-    x_coords = np.repeat(unique_vals, counts)
+    plt.figure(figsize=(10, 5))
 
-    plt.figure(figsize=(8, 5))
-    plt.scatter(x_coords, y_coords, color="blue", alpha=0.7)
+    # Dibujar los puntos
+    plt.scatter(x_coords, y_coords, color="darkblue",
+                s=100, alpha=0.6, edgecolors="black")
 
-    plt.xticks(unique_vals, rotation=45)
-    plt.yticks(np.arange(1, max(counts) + 1))
-    plt.title("Distribución de Salarios (Redondeados en miles)",
+    # Personalización de ejes
+    plt.xticks(df["salario_miles"], rotation=45)
+
+    # Solo mostrar enteros en el eje Y
+    plt.gca().yaxis.set_major_locator(plt.MaxNLocator(integer=True))
+
+    plt.title("Frecuencia de Salarios (Redondeados a miles)",
               fontsize=14, fontweight="bold")
-    plt.xlabel("Salario (USD)")
-    plt.ylabel("Frecuencia")
-    plt.grid(axis="y", linestyle="--", alpha=0.3)
+    plt.xlabel("Salario Estimado (USD)", fontsize=12)
+    plt.ylabel("Número de Empleados", fontsize=12)
+    plt.grid(axis="x", linestyle=":", alpha=0.3)
+
     plt.tight_layout()
     plt.show()
 
