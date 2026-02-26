@@ -3,8 +3,27 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import random
+from matplotlib.ticker import PercentFormatter
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
 from calendar import month_abbr
 from conexion.conexion import get_conexion
+
+
+def printGuia(titulo, guia):
+    consola = Console()
+    consola.print(Panel(
+        f"[bold yellow]{titulo}[/bold yellow]", expand=False))
+
+    # --- EXPLICACIÓN DESTACADA DEL GRÁFICO ---
+    explicacion_texto = (
+        "[bold]¿Qué estamos analizando?[/bold]\n\n"
+        f"{guia}\n\n"
+    )
+
+    consola.print(Panel(explicacion_texto,
+                  title="[bold white]Guía de Graficos/Tablas[/bold white]", border_style="bright_blue", expand=False))
 
 # Gráfico de sectores(Pie chart) - pastel o torta
 # Genera un gráfico circular que muestra la distribución del gasto
@@ -29,6 +48,10 @@ def grafico_pastel():
 
     cursor.close()
     conexion.close()
+
+    titulo = "GRAFICO DE PASTEL: DISTRIBUCION DE GASTOS POR DEPARTAMENTO"
+    guia = "El gráfico de pastel muestra la distribución del gasto total en salarios por cada departamento de la base de datos HR."
+    printGuia(titulo, guia)
 
     # Llenar los arreglos dinámicamente
     sistemas = [fila[0] for fila in resultados]         # categorías
@@ -78,6 +101,10 @@ def grafico_barras():
     df = pd.read_sql(query, conexion)
     conexion.close()
 
+    titulo = "GRAFICO DE BARRAS: SALARIO PROMEDIO POR DEPARTAMENTO"
+    guia = "El gráfico de barras muestra el salario promedio real por departamento, ordenado de mayor a menor."
+    printGuia(titulo, guia)
+
     plt.figure(figsize=(10, 6))
 
     # Mejora visual: Usar un degradado o color sólido profesional
@@ -101,10 +128,90 @@ def grafico_barras():
     plt.tight_layout()
     plt.show()
 
+# Diagrama de Pareto
+# Genera un diagrama de Pareto para analizar qué departamentos
+# concentran el mayor gasto salarial en la empresa.
+
+
+def diagrama_pareto():
+    consola = Console()
+    conexion = get_conexion()
+
+    consulta_sql = """
+        SELECT d.department_name, SUM(e.salary) AS gasto_total
+        FROM employeess e
+        JOIN departmentss d ON e.department_id = d.department_id
+        GROUP BY d.department_name
+        ORDER BY gasto_total DESC;
+    """
+
+    df_gastos = pd.read_sql(consulta_sql, conexion)
+    conexion.close()
+
+    total_nomina = df_gastos['gasto_total'].sum()
+    df_gastos['frec_relativa'] = (
+        df_gastos['gasto_total'] / total_nomina) * 100
+    df_gastos['frec_abs_acumulada'] = df_gastos['gasto_total'].cumsum()
+    df_gastos['frec_rel_acumulada'] = (
+        df_gastos['frec_abs_acumulada'] / total_nomina) * 100
+
+    titulo = "GRAFICO DE PARETO: DISTRIBUCIÓN DE GASTOS POR DEPARTAMENTO"
+    guia = "El diagrama de Pareto muestra el gasto salarial acumulado por departamento, mostrando la proporción de gasto respecto al total."
+
+    printGuia(titulo, guia)
+
+    tabla = Table(title="Tabla de Frecuencias Completa",
+                  header_style="bold magenta")
+    tabla.add_column("Departamento", style="cyan", no_wrap=True)
+    tabla.add_column("Frec. Absoluta (USD)", justify="right", style="green")
+    tabla.add_column("Frec. Relativa (%)", justify="right", style="green")
+    tabla.add_column("Frec. Abs. Acum.", justify="right", style="blue")
+    tabla.add_column("Frec. Rel. Acum.", justify="right", style="blue")
+
+    for _, fila in df_gastos.iterrows():
+        tabla.add_row(
+            fila['department_name'],
+            f"${fila['gasto_total']:,.2f}",
+            f"{fila['frec_relativa']:.2f}%",
+            f"${fila['frec_abs_acumulada']:,.2f}",
+            f"{fila['frec_rel_acumulada']:.2f}%"
+        )
+
+    consola.print(tabla)
+
+    consola.print(
+        "\n[bold blink]Sugerencia:[/bold blink] Cierra la ventana del gráfico para continuar con el programa.")
+
+    fig, ax1 = plt.subplots(figsize=(10, 6))
+
+    ax1.bar(df_gastos['department_name'],
+            df_gastos['gasto_total'], color="steelblue", width=0.8)
+    ax1.set_ylabel("Gasto Total (USD)", color="steelblue", fontsize=12)
+    plt.xticks(rotation=45, ha="right")
+
+    ax2 = ax1.twinx()
+
+    posiciones_x = np.arange(len(df_gastos))
+
+    ax2.plot(posiciones_x, df_gastos['frec_rel_acumulada'],
+             color="red", marker="D", ms=7, linestyle='-', label="Acumulado %")
+
+    ax2.yaxis.set_major_formatter(PercentFormatter())
+    ax2.set_ylabel("Porcentaje Acumulado", color="red", fontsize=12)
+    ax1.set_xlim([-0.5, len(df_gastos) - 0.5])
+    ax2.set_ylim([0, 105])
+
+    plt.title("Diagrama de Pareto: Distribución de Nómina (Técnico)",
+              fontsize=14, fontweight="bold")
+    ax1.grid(axis='y', linestyle='--', alpha=0.5)
+
+    plt.tight_layout()
+    plt.show()
+
+
 # Gráfico de puntos(Dot Plot)
 # Crea un diagrama de puntos que muestra la frecuencia de empleados
 # agrupados por rangos salariales redondeados a los mil dólares más cercanos.
-
 
 def grafico_puntos():
 
@@ -123,6 +230,10 @@ def grafico_puntos():
     # Usamos pandas para una carga más directa
     df = pd.read_sql(query, conexion)
     conexion.close()
+
+    titulo = "GRAFICOS DE PUNTOS: FRECUENCIA DE SALARIOS POR DEPARTAMENTO"
+    guia = "El gráfico de puntos muestra la frecuencia de empleados agrupados por rangos salariales redondeados a los mil dolares mas cercanos."
+    printGuia(titulo, guia)
 
     # Preparación de coordenadas para el efecto de "puntos apilados"
     x_coords = np.repeat(df["salario_miles"], df["cantidad"])
@@ -150,6 +261,7 @@ def grafico_puntos():
     plt.show()
 
 # Gráfico de Bastón
+# Crea un gráfico de bastón que muestra la distribución de salarios de los empleados.
 
 
 def grafico_baston():
@@ -167,6 +279,15 @@ def grafico_baston():
 
     cursor.close()
     conexion.close()
+
+    titulo = "GRAFICOS DE BASTON: SALARIOS DE EMPLEADOS"
+    guia = (
+        "1. [orange1]Barras (Frecuencia):[/orange1] Cada columna agrupa a los empleados en rangos de $1,000.\n"
+        "2. [bold]Eje Horizontal (X):[/bold] Muestra los intervalos salariales (ej. 2000-3000).\n"
+        "3. [bold]Eje Vertical (Y):[/bold] Indica cuántos empleados pertenecen a cada rango.\n"
+        "4. [cyan]Propósito:[/cyan] Identificar visualmente la 'forma' de la nómina (si hay muchos sueldos bajos o pocos sueldos altos)."
+    )
+    printGuia(titulo, guia)
 
     datos = [fila[0] for fila in resultados]
 
@@ -192,6 +313,7 @@ def grafico_baston():
     plt.show()
 
 # Histograma con rangos de valores
+# Crea un gráfico de histograma que muestra la distribución de salarios de los empleados.
 
 
 def grafico_histograma_rangos():
@@ -205,6 +327,17 @@ def grafico_histograma_rangos():
 
     cursor.close()
     conexion.close()
+
+    titulo = "GRAFICOS DE HISTOGRAMA: SALARIOS POR RANGOS"
+    guia = (
+        "1. [orange1]Barras (Bins):[/orange1] Cada columna representa un rango salarial de $1,000.\n"
+        "2. [bold]Eje Y (Frecuencia):[/bold] Indica cuántos empleados caen dentro de cada rango.\n"
+        "3. [bold]Distribución:[/bold] Permite observar la concentración de la nómina y detectar si existen "
+        "sesgos hacia salarios bajos o altos.\n"
+        "4. [cyan]Interpretación:[/cyan] Un pico alto indica el salario más común (moda) de la empresa."
+    )
+    printGuia(titulo, guia)
+
     salarios = [float(r[0]) for r in resultados if r[0] is not None]
 
     if not salarios:
@@ -241,6 +374,7 @@ def grafico_histograma_rangos():
     plt.show()
 
 # Histograma con valores discretos
+# Crea un gráfico de histograma que muestra la distribución de salarios de los empleados.
 
 
 def grafico_histograma_discretos():
@@ -255,6 +389,18 @@ def grafico_histograma_discretos():
 
     cursor.close()
     conexion.close()
+
+    titulo = "GRAFICOS DE HISTOGRAMA: SALARIOS DE EMPLEADOS"
+    guia = (
+        "1. [bold green]Barras (Histograma):[/bold green] Cada barra representa la frecuencia con la que "
+        "aparecen ciertos niveles salariales agrupados en 10 intervalos.\n"
+        "2. [bold]Distribución Discreta:[/bold] Permite observar la densidad de la nómina: dónde hay "
+        "acumulación de personal y dónde hay vacíos salariales.\n"
+        "3. [cyan]Tendencia Central:[/cyan] Ayuda a identificar visualmente si los salarios están "
+        "concentrados en la parte baja, media o alta de la escala.\n"
+        "4. [bold]Eje Y (Frecuencia):[/bold] Indica el conteo exacto de empleados que pertenecen a cada intervalo."
+    )
+    printGuia(titulo, guia)
 
     plt.figure(figsize=(10, 6))
     plt.hist(salarios,
@@ -272,6 +418,7 @@ def grafico_histograma_discretos():
     plt.show()
 
 # Gráfico de líneas(un grupo)
+# Crea un gráfico de líneas que muestra la evolución del salario promedio de los empleados por mes de contratación.
 
 
 def grafico_lineas_un_grupo():
@@ -296,6 +443,19 @@ def grafico_lineas_un_grupo():
     cursor.close()
     conexion.close()
 
+    titulo = "GRAFICOS DE LÍNEAS: SALARIOS PROMEDIO POR MES DE CONTRATAÇÃO"
+    guia = (
+        "1. [bold red]Línea de Tendencia:[/bold red] Muestra la evolución del salario promedio según el mes "
+        "en que los empleados fueron contratados.\n"
+        "2. [bold]Marcadores (Puntos):[/bold] Cada punto representa el valor exacto calculado para ese mes "
+        "específico, facilitando la lectura de picos y valles.\n"
+        "3. [cyan]Análisis de Estacionalidad:[/cyan] Permite identificar si hubo meses o temporadas de "
+        "contratación con perfiles de mayor o menor remuneración.\n"
+        "4. [bold]Interpretación:[/bold] Una línea ascendente o descendente indica cambios en las políticas "
+        "salariales o en el nivel de senioridad de las nuevas contrataciones a lo largo del año."
+    )
+    printGuia(titulo, guia)
+
     plt.figure(figsize=(10, 5))
     plt.plot(meses, salarios_promedio,
              marker='o',
@@ -315,13 +475,12 @@ def grafico_lineas_un_grupo():
     plt.show()
 
 # Gráfico de líneas(dos grupos)
+# Crea un gráfico de líneas que muestra la evolución del salario promedio de los empleados por mes de contratación, agrupados por departamento.
 
 
 def grafico_lineas_dos_grupos():
     conexion = get_conexion()
     cursor = conexion.cursor()
-
-    # La consulta agrupará los salarios promedio por año de contratación para cada departamento, y el gráfico mostrará dos líneas: una para IT y otra para Sales.
 
     # Consulta para obtener el promedio de salarios por año para IT (department_id = 60)
     query_it = """
@@ -354,6 +513,21 @@ def grafico_lineas_dos_grupos():
     cursor.close()
     conexion.close()
 
+    titulo = "GRAFICOS DE LÍNEAS: SALARIOS PROMEDIO POR AÑO (IT VS SALES)"
+
+    guia = (
+        "1. [bold]Análisis Comparativo:[/bold] El gráfico permite contrastar la evolución salarial de los "
+        "departamentos de [blue]IT[/blue] y [orange1]Sales[/orange1] a través de los años.\n"
+        "2. [bold]Tendencias Históricas:[/bold] Cada línea muestra si el promedio de sueldos en las nuevas "
+        "contrataciones ha subido, bajado o se ha mantenido estable en cada departamento.\n"
+        "3. [cyan]Intersecciones:[/cyan] Los puntos donde las líneas se cruzan indican momentos en los que "
+        "ambos departamentos alcanzaron un nivel salarial promedio similar.\n"
+        "4. [bold]Brecha Salarial:[/bold] La distancia vertical entre la línea azul y la naranja revela qué "
+        "departamento ha tenido históricamente una mayor valoración económica en sus contrataciones."
+    )
+
+    printGuia(titulo, guia)
+
     anios = sorted(list(set(anios_it + anios_sales)))
 
     fig, ax = plt.subplots(figsize=(10, 5))
@@ -373,6 +547,7 @@ def grafico_lineas_dos_grupos():
     plt.show()
 
 # Diagrama de cajas(Box plot)
+# Crea un gráfico de cajas que muestra la distribución de salarios por departamento.
 
 
 def grafico_boxplot():
@@ -402,6 +577,22 @@ def grafico_boxplot():
     cursor.close()
     conexion.close()
 
+    titulo = "GRAFICOS DE BOXPLOT: DISTRIBUCIÓN DE SALARIOS POR DEPARTAMENTO"
+
+    guia = (
+        "1. [bold green]Cajas (Rango Intercuartílico):[/bold green] Representan el 50% central de los "
+        "salarios. La altura de la caja indica qué tan concentrados o dispersos están los sueldos en ese departamento.\n"
+        "2. [red]Línea Roja (Mediana):[/red] Indica el valor central de los datos. Permite comparar rápidamente "
+        "qué departamento tiene una tendencia salarial más alta.\n"
+        "3. [bold]Bigotes y Topes:[/bold] Muestran el rango de salarios comunes (mínimos y máximos) sin contar los valores extremos.\n"
+        "4. [orange1]Puntos Naranjas (Outliers):[/orange1] Representan salarios atípicos que están muy por encima "
+        "o por debajo del promedio normal del departamento.\n"
+        "5. [cyan]Interpretación:[/cyan] Una caja más larga indica mayor desigualdad salarial interna, mientras que "
+        "una caja corta refleja sueldos más uniformes."
+    )
+
+    printGuia(titulo, guia)
+
     # Crear el boxplot
     plt.figure(figsize=(10, 6))
     box = plt.boxplot([it_salarios, sales_salarios, finance_salarios],
@@ -424,6 +615,7 @@ def grafico_boxplot():
     plt.show()
 
 # Diagrama de Dispersión(Scatter plot)
+# Crea un gráfico de dispersión que muestra la relación entre el salario y el año de contratación de los empleados del departamento Sales.
 
 
 def grafico_dispersion():
@@ -446,6 +638,21 @@ def grafico_dispersion():
 
     cursor.close()
     conexion.close()
+
+    titulo = "GRAFICOS DE DISPERSIÓN: RELACIÓN AÑO VS SALARIO (SALES)"
+
+    guia = (
+        "1. [bold red]Puntos Individuales:[/bold red] Cada círculo representa a un empleado del departamento de Ventas, "
+        "ubicándolo según su año de ingreso y su salario actual.\n"
+        "2. [bold]Análisis de Correlación:[/bold] Permite observar si existe una relación entre la antigüedad y el sueldo. "
+        "¿Ganan más los empleados que llevan más tiempo en la empresa?\n"
+        "3. [cyan]Dispersión Salarial:[/cyan] Revela qué tan variados son los sueldos dentro de un mismo año de contratación, "
+        "ayudando a identificar diferencias de niveles o roles.\n"
+        "4. [bold]Detección de Patrones:[/bold] Facilita la identificación de valores aislados "
+        "que podrían indicar contrataciones excepcionales o estancamientos salariales."
+    )
+
+    printGuia(titulo, guia)
 
     plt.figure(figsize=(10, 6))
     plt.scatter(

@@ -11,6 +11,7 @@ console = Console()
 opciones = [
     "Gráfico Sectores (Pie Chart)",
     "Gráfico de Barras",
+    "Diagrama de Pareto",
     "Gráfico de Puntos (Dot Plot)",
     "Gráfico de Bastón",
     "Histograma con rangos de valores",
@@ -49,31 +50,35 @@ def mostrar_menu():
 def ejecutar_opcion(eleccion):
     match eleccion:
         case 1:
+
             grafico_pastel()
         case 2:
 
             grafico_barras()
         case 3:
 
-            grafico_puntos()
+            diagrama_pareto()
         case 4:
 
-            grafico_baston()
+            grafico_puntos()
         case 5:
 
-            grafico_histograma_rangos()
+            grafico_baston()
         case 6:
 
-            grafico_histograma_discretos()
+            grafico_histograma_rangos()
         case 7:
 
-            grafico_lineas_un_grupo()
+            grafico_histograma_discretos()
         case 8:
 
-            grafico_lineas_dos_grupos()
+            grafico_lineas_un_grupo()
         case 9:
 
-            grafico_boxplot()
+            grafico_lineas_dos_grupos()
         case 10:
+
+            grafico_boxplot()
+        case 11:
 
             grafico_dispersion()

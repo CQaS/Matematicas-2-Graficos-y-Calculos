@@ -4,12 +4,21 @@ from ui.graficos1 import *
 from ui.menus_opciones_PyD import *
 from ui.calculos_posicionYdispercion import *
 from ui.menus_opciones_CoBa import *
+from ui.menus_opciones_Otros import *
 from ui.calculos_combinatorio_bayes import *
 
+""" 
+TALLO Y HOJA - V - Cuantitativas Continuas
+TABLA DE FRECUENCIAS - V. Cuantitativas Discretas
+TABLA DE FRECUENCIAS - V. Cuantitativas Continuas - (], [)
+GRAFICOS DE SERIES DE TIEMPO - V. Cuantitativas Continuas
+ """
+
 op = [
-    "Gráfico Estadístico (Pie Chart, Barras, Puntos, Bastón, Histogramas, Líneas, Boxplot, Scatter)",
+    "Gráfico Estadístico (V. Cualitativas [Pie Chart, Barras, Pareto] \nV. Cuantitativas [Puntos(D), Bastón(D), Histogramas(C)], Líneas, Boxplot, Scatter)",
     "Calculos Estadísticos (Media, Mediana, Moda, Cuartiles, Varianza y Desviación Estándar)",
-    "Calculos Combinatorios (Arreglos y Combinaciones) y Probabilidades (Teorema de Bayes)"
+    "Calculos Combinatorios (Arreglos y Combinaciones) y Probabilidades (Teorema de Bayes)",
+    "Otros"
 ]
 
 if __name__ == "__main__":
@@ -50,6 +59,7 @@ if __name__ == "__main__":
                             console.print(
                                 f"\n[green]✔ Has elegido:[/green] [bold cyan]{opciones[eleccion - 1]}[/bold cyan]\n", justify="center")
                             input("Presiona ENTER para Ejecutar Gráfico...")
+                            console.clear()
                             ejecutar_opcion(eleccion)
 
                         elif eleccion == 0:
@@ -116,6 +126,39 @@ if __name__ == "__main__":
                                 f"\n[green]✔ Has elegido:[/green] [bold cyan]{opciones_CoBa[eleccion - 1]}[/bold cyan]\n", justify="center")
                             input("Presiona ENTER para Ejecutar Cálculo...")
                             ejecutar_opcion_CoBa(eleccion)
+                            input("\nPresiona ENTER para continuar...\n")
+
+                        elif eleccion == 0:
+                            console.print(
+                                "\n[bold red]Saliendo del sistema. ¡Hasta luego! ⏩[/bold red]\n", justify="center")
+                            break
+                        else:
+                            console.print(
+                                "[red]\n⚠ Opción no válida. Intente de nuevo.[/red]\n", justify="center")
+                            input("Presiona ENTER para continuar...")
+
+                    except Exception as e:
+                        console.print(
+                            f"[red]\n⚠ Error inesperado: {type(e).__name__} - {e}[/red]\n")
+                        input("Presiona ENTER para continuar...")
+
+                    except ValueError:
+                        console.print(
+                            "[red]\n⚠ Entrada inválida. Ingrese un número.[/red]\n")
+                        input("Presiona ENTER para continuar...")
+
+            elif queVer == 4:
+                while True:
+                    mostrar_menu_Otros()
+                    try:
+                        eleccion = int(Prompt.ask(
+                            "[bold yellow]Ingrese una opción[/bold yellow]"))
+
+                        if 1 <= eleccion <= len(opciones_CoBa):
+                            console.print(
+                                f"\n[green]✔ Has elegido:[/green] [bold cyan]{opciones_CoBa[eleccion - 1]}[/bold cyan]\n", justify="center")
+                            input("Presiona ENTER para Ejecutar Cálculo...")
+                            ejecutar_opcion_Otros(eleccion)
                             input("\nPresiona ENTER para continuar...\n")
 
                         elif eleccion == 0:
