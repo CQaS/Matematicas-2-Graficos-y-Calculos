@@ -615,19 +615,18 @@ def grafico_boxplot():
     plt.show()
 
 # Diagrama de Dispersión(Scatter plot)
-# Crea un gráfico de dispersión que muestra la relación entre el salario y el año de contratación de los empleados del departamento Sales.
+# Crea un gráfico de dispersión que muestra la relación entre el salario y la antigüedad de los empleados.
 
 
 def grafico_dispersion():
     conexion = get_conexion()
     cursor = conexion.cursor()
 
-    # Consulta para obtener año de contratación y salario del departamento Sales
+    # Consulta para obtener anios y salarios
     query = """
-        SELECT YEAR(e.hire_date) AS anio, e.salary
-        FROM employeess e
-        JOIN departmentss d ON e.department_id = d.department_id
-        WHERE e.department_id = 80 AND e.salary IS NOT NULL AND e.hire_date IS NOT NULL
+        SELECT YEAR(hire_date) AS anio, salary
+        FROM employeess
+        WHERE salary IS NOT NULL AND hire_date IS NOT NULL
         ORDER BY anio
         """
     cursor.execute(query)
@@ -639,33 +638,31 @@ def grafico_dispersion():
     cursor.close()
     conexion.close()
 
-    titulo = "GRAFICOS DE DISPERSIÓN: RELACIÓN AÑO VS SALARIO (SALES)"
+    titulo = "GRÁFICO DE DISPERSIÓN: RELACIÓN AÑO VS SALARIO (TOTAL EMPRESA)"
 
     guia = (
-        "1. [bold red]Puntos Individuales:[/bold red] Cada círculo representa a un empleado del departamento de Ventas, "
-        "ubicándolo según su año de ingreso y su salario actual.\n"
-        "2. [bold]Análisis de Correlación:[/bold] Permite observar si existe una relación entre la antigüedad y el sueldo. "
-        "¿Ganan más los empleados que llevan más tiempo en la empresa?\n"
-        "3. [cyan]Dispersión Salarial:[/cyan] Revela qué tan variados son los sueldos dentro de un mismo año de contratación, "
-        "ayudando a identificar diferencias de niveles o roles.\n"
-        "4. [bold]Detección de Patrones:[/bold] Facilita la identificación de valores aislados "
-        "que podrían indicar contrataciones excepcionales o estancamientos salariales."
+        "1. [bold red]Mapa de Talentos:[/bold red] Cada punto representa a un empleado de la empresa.\n"
+        "2. [bold]Tendencia Salarial:[/bold] Observa si los salarios aumentan con la antigüedad.\n"
+        "3. [cyan]Dispersión:[/cyan] Identifica bandas salariales por año de ingreso."
     )
 
     printGuia(titulo, guia)
 
     plt.figure(figsize=(10, 6))
+
+    # Usamos alpha=0.5 para que si hay puntos encima de otros, se vea más oscuro
     plt.scatter(
         anios,
         salarios,
-        c='#e74c3c',
-        s=80,
+        c='#2980b9',
+        s=60,
+        alpha=0.5,
         edgecolor='black',
+        label='Empleados'
     )
 
-    # Personalización
-    plt.title(
-        'Relación entre Año de Contratación y Salario (Sales)', fontsize=14, pad=20)
+    plt.title('Dispersión Salarial Total por Año de Ingreso',
+              fontsize=14, pad=20)
     plt.xlabel('Año de Contratación', fontsize=12)
     plt.ylabel('Salario (USD)', fontsize=12)
     plt.grid(linestyle='--', alpha=0.3)
