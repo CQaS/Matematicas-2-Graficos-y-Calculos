@@ -8,14 +8,14 @@ from ui.menus_opciones_Otros import *
 from ui.calculos_combinatorio_bayes import *
 
 """ 
-TALLO Y HOJA - V - Cuantitativas Continuas
 TABLA DE FRECUENCIAS - V. Cuantitativas Discretas
 TABLA DE FRECUENCIAS - V. Cuantitativas Continuas - (], [)
 GRAFICOS DE SERIES DE TIEMPO - V. Cuantitativas Continuas
+GRAFICO ACUMULATIVO CRECIENTE - V. Cuantitativas Discretas
  """
 
 op = [
-    "Gráfico Estadístico (V. Cualitativas [Pie Chart, Barras, Pareto] \nV. Cuantitativas [Puntos(D), Bastón(D), Histogramas(C)], Líneas, Boxplot, Scatter)",
+    "Gráfico Estadístico (V. Cualitativas [Pie Chart, Barras, Pareto] \nV. Cuantitativas [Puntos(C - D), Bastón(D), Histogramas(C), Tallo y Hoja(C - C)], Líneas, Boxplot, Scatter)",
     "Calculos Estadísticos (Media, Mediana, Moda, Cuartiles, Varianza y Desviación Estándar)",
     "Calculos Combinatorios (Arreglos y Combinaciones) y Probabilidades (Teorema de Bayes)",
     "Otros"

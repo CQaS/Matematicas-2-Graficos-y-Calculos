@@ -52,4 +52,4 @@ def ejecutar_opcion_PyD(eleccion):
         case 4:
             calcular_cuartiles()
         case 5:
-            calcular_varianza_desviacion()
+            calcular_analisis_dispersion()

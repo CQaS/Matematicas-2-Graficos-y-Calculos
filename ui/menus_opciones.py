@@ -12,12 +12,13 @@ opciones = [
     "Gráfico Sectores (Pie Chart)",
     "Gráfico de Barras",
     "Diagrama de Pareto",
+    "Gráfico de Tallo y Hoja",
     "Gráfico de Puntos (Dot Plot)",
     "Gráfico de Bastón",
     "Histograma con rangos de valores",
     "Histograma con valores discretos",
     "Gráfico de Líneas (Un Grupo)",
-    "Gráfico de Líneas (Dos Grupos)",
+    "Gráfico de Líneas (Evolucion de contrataciones)",
     "Boxplot (Diagrama de Cajas)",
     "Gráfico de Dispersión (Scatter)"
 ]
@@ -40,7 +41,7 @@ def mostrar_menu():
     for i, opcion in enumerate(opciones, 1):
         tabla.add_row(str(i), opcion)
 
-    tabla.add_row("[bold red]0[/bold red]", "[red]Salir del sistema[/red]")
+    tabla.add_row("[bold red]0[/bold red]", "[red]Volver atras[/red]")
 
     panel = Panel(tabla, border_style="bright_blue",
                   title="Estadística", subtitle="Selecciona una opción [0-{}]".format(len(opciones)))
@@ -60,25 +61,28 @@ def ejecutar_opcion(eleccion):
             diagrama_pareto()
         case 4:
 
-            grafico_puntos()
+            grafico_tallo_y_hoja_porEdad()
         case 5:
 
-            grafico_baston()
+            grafico_puntos()
         case 6:
 
-            grafico_histograma_rangos()
+            grafico_baston()
         case 7:
 
-            grafico_histograma_discretos()
+            grafico_histograma_rangos()
         case 8:
 
-            grafico_lineas_un_grupo()
+            grafico_histograma_discretos()
         case 9:
 
-            grafico_lineas_dos_grupos()
+            grafico_lineas_un_grupo()
         case 10:
 
-            grafico_boxplot()
+            grafico_evolucion_contrataciones()
         case 11:
+
+            grafico_boxplot()
+        case 12:
 
             grafico_dispersion()
