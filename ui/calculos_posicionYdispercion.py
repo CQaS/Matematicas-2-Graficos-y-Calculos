@@ -414,16 +414,16 @@ def calcular_analisis_dispersion():
 
         tabla_stats.add_section()
 
-        tabla_stats.add_row("DISPERSIÓN", "Rango Total",
-                            f"{rango:.2f}%", "Brecha absoluta entre el mejor y el peor.")
-        tabla_stats.add_row("DISPERSIÓN", "Rango Intercuartil (IQR)",
-                            f"{iqr:.2f}%", "Dispersión del núcleo central (50%).")
+        tabla_stats.add_row("DISPERSIÓN", "Rango (R)",
+                            f"{int(rango)}", "Diferencia entre la mayor y la menor.")
+        tabla_stats.add_row("DISPERSIÓN", "Rango Intercuartil (RI)",
+                            f"{int(iqr)}", "Dispersión central (50%).")
         tabla_stats.add_row("DISPERSIÓN", "Varianza",
                             f"{varianza:.2f}", "Dispersión cuadrática media.")
-        tabla_stats.add_row("DISPERSIÓN", "Desviación Estándar",
-                            f"{desviacion:.2f}%", "Promedio de desvío del rendimiento.")
-        tabla_stats.add_row("DISPERSIÓN", "Coef. de Variación",
-                            f"{cv:.2f}%", "Nivel de inestabilidad del departamento.")
+        tabla_stats.add_row("DISPERSIÓN", "Desviación Estándar (S)",
+                            f"{desviacion:.2f}", "Raiz cuadrada positiva de la varianza.")
+        tabla_stats.add_row("DISPERSIÓN", "Coef. de Variación (CV)",
+                            f"{cv:.2f}%", "Cociente entre la desviación y la media.")
 
         console.print(Panel(
             tabla_stats, title="📊 CALCULOS INTEGRALES", border_style="bright_magenta"))

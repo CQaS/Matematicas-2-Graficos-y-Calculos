@@ -7,7 +7,7 @@ from matplotlib.ticker import PercentFormatter
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
-from calendar import month_abbr
+from calendar import month_abbr, month_name
 from conexion.conexion import get_conexion
 
 consola = Console()
@@ -29,7 +29,7 @@ def printGuia(titulo, guia):
                   title="[bold white]Guía de Graficos/Tablas[/bold white]", border_style="bright_blue", expand=False))
 
     consola.print(
-        "\n[bold blink]Sugerencia:[/bold blink] Cierra la ventana del gráfico para continuar con el programa.")
+        "\n[bold blink]Sugerencia:[/bold blink] Cierra la ventana del gráfico para continuar con el programa.\n\n")
 
 # Gráfico de sectores(Pie chart) - pastel o torta
 # Genera un gráfico circular que muestra la distribución del gasto
@@ -39,51 +39,91 @@ def printGuia(titulo, guia):
 def grafico_pastel():
 
     conexion = get_conexion()
-
     cursor = conexion.cursor()
 
-    # Consulta para obtener categorías y sus valores
     cursor.execute("""
-                SELECT d.department_name, SUM(e.salary)
-                FROM employeess e
-                JOIN departmentss d ON e.department_id = d.department_id
-                GROUP BY d.department_name
-                """)
-
+        SELECT d.department_name, SUM(e.salary) as total_gasto
+        FROM employeess e
+        JOIN departmentss d ON e.department_id = d.department_id
+        GROUP BY d.department_name
+        ORDER BY total_gasto DESC
+    """)
     resultados = cursor.fetchall()
-
     cursor.close()
     conexion.close()
 
-    titulo = "GRAFICO DE PASTEL: DISTRIBUCION DE GASTOS POR DEPARTAMENTO"
-    guia = "El gráfico de pastel muestra la distribución del gasto total en salarios por cada departamento de la base de datos HR."
+    if not resultados:
+        consola.print("[yellow]No hay datos disponibles.[/yellow]")
+        return
+
+    departamentos = [fila[0] for fila in resultados]
+    montos = [float(fila[1]) for fila in resultados]
+    total_general = sum(montos)
+
+    tabla = Table(title="Análisis de Frecuencias: Distribución Salarial",
+                  header_style="bold magenta")
+    tabla.add_column("Departamento", style="cyan", no_wrap=True)
+    tabla.add_column("Frec. Absoluta (USD)", justify="right", style="green")
+    tabla.add_column("Frec. Relativa (%)", justify="right", style="green")
+    tabla.add_column("Frec. Abs. Acum.", justify="right", style="blue")
+    tabla.add_column("Frec. Rel. Acum.", justify="right", style="blue")
+
+    frec_abs_acumulada = 0
+    frec_rel_acumulada = 0
+
+    for dep, monto in zip(departamentos, montos):
+        porcentaje = (monto / total_general) * 100
+        frec_abs_acumulada += monto
+        frec_rel_acumulada += porcentaje
+
+        tabla.add_row(
+            dep,
+            f"{monto:,.2f}",
+            f"{porcentaje:.2f}%",
+            f"{frec_abs_acumulada:,.2f}",
+            f"{frec_rel_acumulada:.2f}%"
+        )
+
+    consola.clear()
+
+    titulo = "GRAFICO DE PASTEL: DISTRIBUCIÓN DE GASTOS POR DEPARTAMENTO"
+    guia = "El gráfico de pastel muestra el gasto salarial acumulado por departamento, mostrando la proporción de gasto respecto al total."
+
     printGuia(titulo, guia)
 
-    # Llenar los arreglos dinámicamente
-    sistemas = [fila[0] for fila in resultados]         # categorías
-    porcentajes = [float(fila[1]) for fila in resultados]  # montos
+    consola.print(tabla)
 
-    # Generar colores aleatorios según cantidad de categorías
-    colores = [
-        f"#{random.randint(0, 0xFFFFFF):06x}"
-        for _ in range(len(sistemas))
-    ]
+    colores = [f"#{random.randint(0, 0xFFFFFF):06x}" for _ in range(
+        len(departamentos))]
 
-    explode = [0] * len(porcentajes)
+    plt.figure(figsize=(12, 7))
 
-    # Crear gráfico de pastel
-    plt.figure(figsize=(8, 5))
-    plt.pie(porcentajes,
-            explode=explode,
-            labels=sistemas,
-            colors=colores,
-            autopct='%1.1f%%',  # Mostrar porcentajes
-            )
+    patches, texts, autotexts = plt.pie(
+        montos,
+        autopct='%1.1f%%',
+        startangle=140,
+        colors=colores,
+        pctdistance=0.85,
+        textprops={'color': "w", 'weight': 'bold', 'fontsize': 9}
+    )
 
-    # Personalización
-    plt.title('Gastos Mayo 2025',
-              fontsize=14)
+    plt.legend(
+        patches,
+        departamentos,
+        title="Departamentos",
+        loc="center left",
+        bbox_to_anchor=(1, 0, 0.5, 1),
+        fontsize=9
+    )
+
+    plt.title('Distribución de Carga Salarial - 2026', fontsize=14, pad=20)
+    plt.axis('equal')
+
+    consola.print(
+        "\n[bold magenta]Generando gráfico de pastel...[/bold magenta]")
+    plt.tight_layout()
     plt.show()
+
 
 # Gráfico de barras
 # Genera un gráfico de barras comparativo que muestra el salario
@@ -93,44 +133,80 @@ def grafico_pastel():
 def grafico_barras():
 
     conexion = get_conexion()
+    cursor = conexion.cursor()
 
-    # Mejora: Redondeamos a 2 decimales directamente en SQL
     query = """
         SELECT d.department_name, ROUND(AVG(e.salary), 2) AS salario_promedio
         FROM employeess e
         JOIN departmentss d ON e.department_id = d.department_id
         GROUP BY d.department_name
-        ORDER BY salario_promedio DESC;
+        ORDER BY salario_promedio DESC
     """
-
-    # Sugerencia: Cargar directamente a DataFrame para simplificar
-    df = pd.read_sql(query, conexion)
+    cursor.execute(query)
+    resultados = cursor.fetchall()
+    cursor.close()
     conexion.close()
 
-    titulo = "GRAFICO DE BARRAS: SALARIO PROMEDIO POR DEPARTAMENTO"
-    guia = "El gráfico de barras muestra el salario promedio real por departamento, ordenado de mayor a menor."
+    if not resultados:
+        consola.print(
+            "[yellow]No hay datos disponibles para el análisis salarial.[/yellow]")
+        return
+
+    nombres_deptos = [fila[0] for fila in resultados]
+    promedios = [float(fila[1]) for fila in resultados]
+    suma_de_promedios = sum(promedios)
+
+    tabla = Table(title="Análisis de Salarios Promedio por Departamento",
+                  header_style="bold magenta")
+    tabla.add_column("Departamento", style="cyan", no_wrap=True)
+    tabla.add_column("Promedio (USD)", justify="right", style="green")
+    tabla.add_column("Frec. Relativa (%)", justify="right", style="green")
+    tabla.add_column("Frec. Abs. Acum.", justify="right", style="blue")
+    tabla.add_column("Frec. Rel. Acum.", justify="right", style="blue")
+
+    f_abs_acum = 0
+    f_rel_acum = 0
+
+    for depto, prom in zip(nombres_deptos, promedios):
+        porcentaje = (prom / suma_de_promedios) * 100
+        f_abs_acum += prom
+        f_rel_acum += porcentaje
+
+        tabla.add_row(
+            depto,
+            f"{prom:,.2f}",
+            f"{porcentaje:.2f}%",
+            f"{f_abs_acum:,.2f}",
+            f"{f_rel_acum:.2f}%"
+        )
+
+    consola.clear()
+
+    titulo = "GRAFICO DE BARRAS: RANKING DE SALARIOS PROMEDIO POR DEPARTAMENTO"
+    guia = "El gráfico de barras muestra el salario promedio real por departamento, mostrando la proporción de salario respecto al total."
+
     printGuia(titulo, guia)
 
+    consola.print(tabla)
+
     plt.figure(figsize=(10, 6))
+    colores_barras = [
+        f"#{random.randint(0, 0xFFFFFF):06x}" for _ in range(len(nombres_deptos))]
 
-    # Mejora visual: Usar un degradado o color sólido profesional
-    barras = plt.bar(df["department_name"], df["salario_promedio"],
-                     color="steelblue", edgecolor="black")
+    barras = plt.bar(nombres_deptos, promedios,
+                     color=colores_barras, edgecolor='black', alpha=0.8)
 
-    # Personalización
-    plt.title("Salario Promedio por Departamento",
-              fontsize=14, fontweight="bold")
-    plt.xlabel("Departamento", fontsize=12)
-    plt.ylabel("Salario Promedio (USD)", fontsize=12)
-    plt.xticks(rotation=45, ha="right")
-    plt.grid(axis="y", linestyle="--", alpha=0.7)
-
-    # Opcional: Agregar el valor numérico encima de cada barra
     for barra in barras:
         yval = barra.get_height()
-        plt.text(barra.get_x() + barra.get_width()/2, yval, f'${yval}',
-                 va='bottom', ha='center', fontsize=9)
+        plt.text(barra.get_x() + barra.get_width()/2, yval + 100, f'${yval:,.0f}',
+                 ha='center', va='bottom', fontweight='bold', fontsize=8)
 
+    plt.title('Ranking de Salarios Promedio por Departamento - 2026', fontsize=14)
+    plt.ylabel('Salario Promedio (USD)', fontsize=11)
+    plt.xticks(rotation=45, ha='right')
+
+    consola.print(
+        "\n[bold magenta]Generando gráfico de barras salariales...[/bold magenta]")
     plt.tight_layout()
     plt.show()
 
@@ -273,47 +349,90 @@ def grafico_tallo_y_hoja_porEdad():
 def grafico_puntos():
 
     conexion = get_conexion()
+    cursor = conexion.cursor()
 
-    # Consulta: Agrupamos por miles para identificar tendencias de pago
+    # SQL: Cantidad de empleados por departamento
     query = """
-        SELECT 
-            CAST(ROUND(salary, -3) AS INT) AS salario_miles,
-            COUNT(*) AS cantidad
-        FROM employeess
-        GROUP BY ROUND(salary, -3)
-        ORDER BY salario_miles;
+        SELECT d.department_name, COUNT(e.employee_id) AS cantidad_empleados
+        FROM employeess e
+        JOIN departmentss d ON e.department_id = d.department_id
+        GROUP BY d.department_name
+        ORDER BY cantidad_empleados DESC
     """
-
-    # Usamos pandas para una carga más directa
-    df = pd.read_sql(query, conexion)
+    cursor.execute(query)
+    resultados = cursor.fetchall()
+    cursor.close()
     conexion.close()
 
-    titulo = "GRAFICOS DE PUNTOS: FRECUENCIA DE SALARIOS POR DEPARTAMENTO"
-    guia = "El gráfico de puntos muestra la frecuencia de empleados agrupados por rangos salariales redondeados a los mil dolares mas cercanos."
+    if not resultados:
+        consola.print(
+            "[yellow]No hay datos disponibles para el gráfico de puntos.[/yellow]")
+        return
+
+    departamentos = [fila[0] for fila in resultados]
+    cantidades = [int(fila[1]) for fila in resultados]
+    total_empleados = sum(cantidades)
+
+    tabla = Table(title="Análisis de Frecuencias: Plantilla por Departamento",
+                  header_style="bold magenta")
+    tabla.add_column("Departamento", style="cyan", no_wrap=True)
+    tabla.add_column("Frec. Absoluta (Emp.)", justify="right", style="green")
+    tabla.add_column("Frec. Relativa (%)", justify="right", style="green")
+    tabla.add_column("Frec. Abs. Acum.", justify="right", style="blue")
+    tabla.add_column("Frec. Rel. Acum.", justify="right", style="blue")
+
+    f_abs_acum = 0
+    f_rel_acum = 0
+
+    for depto, cant in zip(departamentos, cantidades):
+        porcentaje = (cant / total_empleados) * 100
+        f_abs_acum += cant
+        f_rel_acum += porcentaje
+
+        tabla.add_row(
+            depto,
+            str(cant),
+            f"{porcentaje:.2f}%",
+            str(f_abs_acum),
+            f"{f_rel_acum:.2f}%"
+        )
+
+    consola.clear()
+
+    titulo = "GRÁFICO DE PUNTOS: DISTRIBUCIÓN DE EMPLEADOS POR DEPARTAMENTO"
+    guia = (
+        "1. [bold]Frecuencia Absoluta:[/bold] Representa la cantidad de empleados en un departamento.\n"
+        "2. [bold]Frecuencia Relativa:[/bold] Representa el porcentaje de empleados en un departamento respecto al total de empleados.\n"
+        "3. [bold]Frecuencia Absoluta Acumulada:[/bold] Representa la cantidad de empleados acumulada en todos los departamentos.\n"
+        "4. [bold]Frecuencia Relativa Acumulada:[/bold] Representa el porcentaje de empleados acumulado en todos los departamentos respecto al total de empleados.\n"
+    )
+
     printGuia(titulo, guia)
 
-    # Preparación de coordenadas para el efecto de "puntos apilados"
-    x_coords = np.repeat(df["salario_miles"], df["cantidad"])
-    y_coords = np.concatenate([np.arange(1, c + 1) for c in df["cantidad"]])
+    consola.print(tabla)
 
-    plt.figure(figsize=(10, 5))
+    plt.figure(figsize=(10, 8))
 
-    # Dibujar los puntos
-    plt.scatter(x_coords, y_coords, color="darkblue",
-                s=100, alpha=0.6, edgecolors="black")
+    departamentos_inv = departamentos[::-1]
+    cantidades_inv = cantidades[::-1]
 
-    # Personalización de ejes
-    plt.xticks(df["salario_miles"], rotation=45)
+    plt.hlines(y=departamentos_inv, xmin=0, xmax=cantidades_inv,
+               color='skyblue', alpha=0.5, linewidth=2)
 
-    # Solo mostrar enteros en el eje Y
-    plt.gca().yaxis.set_major_locator(plt.MaxNLocator(integer=True))
+    plt.plot(cantidades_inv, departamentos_inv, "o",
+             markersize=10, color='blue', alpha=0.7)
 
-    plt.title("Frecuencia de Salarios (Redondeados a miles)",
-              fontsize=14, fontweight="bold")
-    plt.xlabel("Salario Estimado (USD)", fontsize=12)
-    plt.ylabel("Número de Empleados", fontsize=12)
-    plt.grid(axis="x", linestyle=":", alpha=0.3)
+    for i, v in enumerate(cantidades_inv):
+        plt.text(v + 0.5, i, str(v), color='blue',
+                 va='center', fontweight='bold')
 
+    plt.title('Distribución de Empleados por Departamento - 2026',
+              fontsize=14, pad=20)
+    plt.xlabel('Cantidad de Empleados', fontsize=11)
+    plt.grid(axis='x', linestyle='--', alpha=0.3)
+
+    consola.print(
+        "\n[bold magenta]Generando gráfico de puntos (Lollipop)...[/bold magenta]")
     plt.tight_layout()
     plt.show()
 
@@ -337,6 +456,12 @@ def grafico_baston():
     cursor.close()
     conexion.close()
 
+    if not resultados:
+        consola.print("[yellow]No hay datos salariales.[/yellow]")
+        return
+
+    consola.clear()
+
     titulo = "GRAFICOS DE BASTON: SALARIOS DE EMPLEADOS"
     guia = (
         "1. [orange1]Barras (Frecuencia):[/orange1] Cada columna agrupa a los empleados en rangos de $1,000.\n"
@@ -345,6 +470,45 @@ def grafico_baston():
         "4. [cyan]Propósito:[/cyan] Identificar visualmente la 'forma' de la nómina (si hay muchos sueldos bajos o pocos sueldos altos)."
     )
     printGuia(titulo, guia)
+
+    datos = [float(fila[0]) for fila in resultados]
+    total_emp = len(datos)
+
+    # Creamos rangos de 1000 en 1000 para la tabla
+    min_s = int(min(datos) // 1000 * 1000)
+    max_s = int(max(datos) // 1000 * 1000) + 1000
+    rangos = range(min_s, max_s + 1000, 1000)
+
+    tabla = Table(title="Distribución Salarial por Rangos",
+                  header_style="bold magenta")
+    tabla.add_column("Rango Salarial (USD)", style="cyan")
+    tabla.add_column("Frec. Absoluta (n)", justify="right", style="green")
+    tabla.add_column("Frec. Relativa (%)", justify="right", style="green")
+    tabla.add_column("Frec. Abs. Acum.", justify="right", style="blue")
+    tabla.add_column("Frec. Rel. Acum.", justify="right", style="blue")
+
+    f_abs_acum = 0
+    f_rel_acum = 0
+
+    for i in range(len(rangos)-1):
+        inf, sup = rangos[i], rangos[i+1]
+        # Contar cuántos empleados caen en este rango
+        cant = sum(1 for s in datos if inf <= s < sup)
+
+        if cant > 0:  # Solo mostramos rangos con gente
+            porcentaje = (cant / total_emp) * 100
+            f_abs_acum += cant
+            f_rel_acum += porcentaje
+
+            tabla.add_row(
+                f"${inf:,} - ${sup:,}",
+                str(cant),
+                f"{porcentaje:.2f}%",
+                str(f_abs_acum),
+                f"{f_rel_acum:.2f}%"
+            )
+
+    consola.print(tabla)
 
     datos = [fila[0] for fila in resultados]
 
@@ -479,116 +643,164 @@ def grafico_histograma_discretos():
 
 
 def grafico_lineas_un_grupo():
+
     conexion = get_conexion()
     cursor = conexion.cursor()
 
-    # Consulta para obtener el promedio de salarios por mes de contratación
+    # SQL: Conteo de contrataciones por mes (independiente del año)
+    # Esto nos dice en qué meses del año la empresa suele crecer más
     query = """
-        SELECT MONTH(hire_date) AS mes, AVG(salary) AS salario_promedio
+        SELECT MONTH(hire_date) AS mes_num, 
+               COUNT(employee_id) AS cantidad_contrataciones
         FROM employeess
-        WHERE salary IS NOT NULL
         GROUP BY MONTH(hire_date)
-        ORDER BY mes
-        """
-    cursor.execute(query)
-
-    resultados = cursor.fetchall()
-    meses = [month_abbr[mes]
-             for mes, _ in resultados]  # Nombres abreviados de meses
-    salarios_promedio = [float(salario) for _, salario in resultados]
-
-    cursor.close()
-    conexion.close()
-
-    titulo = "GRAFICOS DE LÍNEAS: SALARIOS PROMEDIO POR MES DE CONTRATAÇÃO"
-    guia = (
-        "1. [bold red]Línea de Tendencia:[/bold red] Muestra la evolución del salario promedio según el mes "
-        "en que los empleados fueron contratados.\n"
-        "2. [bold]Marcadores (Puntos):[/bold] Cada punto representa el valor exacto calculado para ese mes "
-        "específico, facilitando la lectura de picos y valles.\n"
-        "3. [cyan]Análisis de Estacionalidad:[/cyan] Permite identificar si hubo meses o temporadas de "
-        "contratación con perfiles de mayor o menor remuneración.\n"
-        "4. [bold]Interpretación:[/bold] Una línea ascendente o descendente indica cambios en las políticas "
-        "salariales o en el nivel de senioridad de las nuevas contrataciones a lo largo del año."
-    )
-    printGuia(titulo, guia)
-
-    plt.figure(figsize=(10, 5))
-    plt.plot(meses, salarios_promedio,
-             marker='o',
-             linestyle='-',
-             color='#E74C3C',
-             linewidth=2,
-             label='Salario Promedio (USD)')
-
-    # Personalización
-    plt.title('Salario Promedio por Mes de Contratación',
-              fontsize=14, pad=20)
-    plt.xlabel('Mes', fontsize=12)
-    plt.ylabel('Salario Promedio (USD)', fontsize=12)
-    plt.grid(axis='y', linestyle='--', alpha=0.7)
-    plt.legend()
-
-    plt.show()
-
-# Gráfico de líneas(dos grupos)
-# Crea un gráfico de líneas que muestra la evolución del salario promedio de los empleados por mes de contratación, agrupados por departamento.
-
-
-def grafico_evolucion_contrataciones():
-    conexion = get_conexion()
-    cursor = conexion.cursor()
-
-    # Consulta: Cuenta empleados por año de contratación
-    query = """
-        SELECT YEAR(hire_date) AS anio, COUNT(*) AS total_empleados
-        FROM employeess
-        WHERE hire_date IS NOT NULL
-        GROUP BY YEAR(hire_date)
-        ORDER BY anio
-        """
+        ORDER BY mes_num
+    """
     cursor.execute(query)
     resultados = cursor.fetchall()
 
     if not resultados:
-        print("[bold yellow]Aviso:[/bold yellow] No hay datos de contrataciones.")
+        consola.print(
+            "[yellow]No hay datos de fechas de contratación.[/yellow]")
         cursor.close()
         conexion.close()
         return
 
-    anios = [int(row[0]) for row in resultados]
-    totales = [int(row[1]) for row in resultados]
+    meses_nombres = []
+    conteos_contrataciones = []
+    meses_espanol = ["", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+                     "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
+
+    for mes_num, cantidad in resultados:
+        meses_nombres.append(meses_espanol[mes_num].capitalize())
+        conteos_contrataciones.append(int(cantidad))
+
+    total_contrataciones = sum(conteos_contrataciones)
+
+    f_abs_acum = 0
+    f_rel_acum = 0
+
+    tabla = Table(title="Análisis Estacional de Reclutamiento",
+                  header_style="bold magenta")
+    tabla.add_column("Mes", style="cyan")
+    tabla.add_column("Contrataciones (F. Abs)", justify="right", style="green")
+    tabla.add_column("Frec. Relativa (%)", justify="right", style="green")
+    tabla.add_column("Total Acumulado", justify="right", style="blue")
+    tabla.add_column("Crecimiento Acum. %", justify="right", style="blue")
+
+    for i in range(len(meses_nombres)):
+        cant = conteos_contrataciones[i]
+        porcentaje = (cant / total_contrataciones) * 100
+        f_abs_acum += cant
+        f_rel_acum += porcentaje
+
+        tabla.add_row(
+            meses_nombres[i],
+            str(cant),
+            f"{porcentaje:.2f}%",
+            str(f_abs_acum),
+            f"{f_rel_acum:.2f}%"
+        )
+
+    consola.clear()
+    consola.print(tabla)
 
     cursor.close()
     conexion.close()
 
-    titulo = "GRÁFICO DE LÍNEAS: EVOLUCIÓN DE CONTRATACIONES POR AÑO"
+    titulo = "TENDENCIA DE CONTRATACIONES POR MES"
     guia = (
-        "1. [bold]Crecimiento de la Empresa:[/bold] La línea muestra cuántas personas se unieron "
-        "cada año.\n"
-        "2. [bold]Picos de Contratación:[/bold] Identifica los años de mayor expansión (ej. 2026).\n"
-        "3. [bold]Tendencia:[/bold] Observa si la empresa está contratando cada vez más o si se ha estabilizado."
+        "1. [bold red]Línea de Contrataciones:[/bold red] Muestra el volumen de altas en la empresa por mes.\n"
+        "2. [bold]Picos de Contratación:[/bold] Identifica las temporadas de mayor crecimiento orgánico.\n"
+        "3. [cyan]Propósito:[/cyan] Ayuda a planificar las cargas de trabajo de capacitación e inducción (Onboarding)."
     )
     printGuia(titulo, guia)
 
-    # --- GRAFICAR ---
-    fig, ax = plt.subplots(figsize=(10, 5))
+    plt.figure(figsize=(10, 5))
+    plt.plot(meses_nombres, conteos_contrataciones,
+             marker='s',  # Marcador cuadrado para variar
+             linestyle='-',
+             color='#2980B9',  # Un azul corporativo
+             linewidth=3,
+             label='Nuevos Empleados')
 
-    # Área sombreada bajo la línea para más impacto visual
-    ax.plot(anios, totales, marker="o", linestyle="-",
-            color="#27ae60", linewidth=2)
-    ax.fill_between(anios, totales, color="#27ae60", alpha=0.2)
+    plt.fill_between(meses_nombres, conteos_contrataciones,
+                     color='#2980B9', alpha=0.2)
 
-    # Personalización
-    plt.title('Ritmo de Contratación Anual (Total Empresa)',
-              fontsize=14, pad=20)
-    plt.xlabel('Año', fontsize=12)
-    plt.ylabel('Cantidad de Empleados Nuevos', fontsize=12)
+    for x, y in zip(meses_nombres, conteos_contrataciones):
+        plt.text(x, y + 0.1, str(y), ha='center',
+                 va='bottom', fontsize=10, fontweight='bold')
 
-    # Forzar años enteros
-    plt.xticks(anios, rotation=45)
-
+    plt.title('Histórico Estacional de Contrataciones', fontsize=14, pad=20)
+    plt.xlabel('Mes del Año', fontsize=12)
+    plt.ylabel('Cantidad de Ingresos', fontsize=12)
     plt.grid(axis='y', linestyle='--', alpha=0.5)
+    plt.xticks(rotation=45)
+
+    plt.tight_layout()
+    plt.show()
+
+# Gráfico de líneas(dos grupos)
+# Crea un gráfico de líneas que muestra la evolución del salario promedio de los empleados por mes de contratación.
+
+
+def gráfico_líneas_dos_grupos():
+    conexion = get_conexion()
+    cursor = conexion.cursor()
+
+    # SQL Server: Comparamos el volumen de contrataciones de IT vs Sales por mes
+    query = """
+        SELECT 
+            MONTH(e.hire_date) AS mes,
+            SUM(CASE WHEN d.department_name = 'IT' THEN 1 ELSE 0 END) AS contrataciones_it,
+            SUM(CASE WHEN d.department_name = 'Sales' THEN 1 ELSE 0 END) AS contrataciones_ventas
+        FROM employeess e
+        JOIN departmentss d ON e.department_id = d.department_id
+        WHERE d.department_name IN ('IT', 'Sales')
+        GROUP BY MONTH(e.hire_date)
+        ORDER BY mes;
+    """
+    cursor.execute(query)
+    resultados = cursor.fetchall()
+    cursor.close()
+    conexion.close()
+
+    if not resultados:
+        consola.print(
+            "[yellow]No se encontraron datos para estos departamentos.[/yellow]")
+        return
+
+    meses_num = [r[0] for r in resultados]
+    datos_it = [int(r[1]) for r in resultados]
+    datos_ventas = [int(r[2]) for r in resultados]
+
+    nombres_meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+                     "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
+    etiquetas_x = [nombres_meses[m-1] for m in meses_num]
+
+    titulo = "COMPARATIVA DE RECLUTAMIENTO POR DEPARTAMENTO"
+    guia = (
+        "1. [bold blue]Línea IT:[/bold blue] Muestra el ritmo de crecimiento del área tecnológica.\n"
+        "2. [bold green]Línea Ventas:[/bold green] Muestra la agresividad comercial en contrataciones.\n"
+        "3. [bold]Análisis:[/bold] Observa si los picos de Ventas coinciden con los de IT o si son independientes."
+    )
+    printGuia(titulo, guia)
+
+    plt.figure(figsize=(12, 6))
+
+    plt.plot(etiquetas_x, datos_it, marker='D',
+             linewidth=2.5, label="IT", color='#2980B9')
+    plt.plot(etiquetas_x, datos_ventas, marker='o',
+             linewidth=2.5, label="Ventas", color='#27AE60')
+
+    plt.title('Tendencia de Contratación: IT vs. Ventas (Histórico)',
+              fontsize=14, pad=20)
+    plt.xlabel('Meses del Año', fontsize=12)
+    plt.ylabel('Nuevos Empleados', fontsize=12)
+    plt.grid(True, linestyle=':', alpha=0.7)
+    plt.legend(loc='upper right')
+
+    plt.xticks(rotation=45)
     plt.tight_layout()
     plt.show()
 
@@ -601,86 +813,107 @@ def grafico_boxplot():
     conexion = get_conexion()
     cursor = conexion.cursor()
 
-    # -------------------------
-    dept_it = 1
-    dept_sales = 5
-    dept_finance = 2
-    # -------------------------
+    # IDs de los departamentos según tu estructura
+    id_ventas = 5
+    id_finanzas = 2
 
+    # SQL Server: Solo Finance y Sales
     query = f"""
-        SELECT e.department_id, e.salary
+        SELECT d.department_name, e.salary
         FROM employeess e
-        WHERE e.department_id IN ({dept_it}, {dept_sales}, {dept_finance}) 
+        JOIN departmentss d ON e.department_id = d.department_id
+        WHERE e.department_id IN ({id_ventas}, {id_finanzas}) 
         AND e.salary IS NOT NULL
-        ORDER BY e.department_id
-        """
+    """
     cursor.execute(query)
     resultados = cursor.fetchall()
-
-    # Organizar datos por departamento
-    salarios_por_depto = {dept_it: [], dept_sales: [], dept_finance: []}
-    for dept_id, salary in resultados:
-        if dept_id in salarios_por_depto:
-            salarios_por_depto[dept_id].append(float(salary))
-
-    # Obtener listas
-    it_salarios = salarios_por_depto[dept_it]
-    sales_salarios = salarios_por_depto[dept_sales]
-    finance_salarios = salarios_por_depto[dept_finance]
-
     cursor.close()
     conexion.close()
 
-    titulo = "GRAFICOS DE BOXPLOT: DISTRIBUCIÓN DE SALARIOS POR DEPARTAMENTO"
+    datos_por_nombre = {"Sales": [], "Finance": []}
+    for nombre_depto, salario in resultados:
+        if nombre_depto in datos_por_nombre:
+            datos_por_nombre[nombre_depto].append(float(salario))
 
+    ventas_salarios = datos_por_nombre["Sales"]
+    finanzas_salarios = datos_por_nombre["Finance"]
+
+    tabla = Table(title="Resumen Estadístico de Salarios",
+                  header_style="bold magenta")
+    tabla.add_column("Departamento", style="cyan")
+    tabla.add_column("Mínimo", justify="right")
+    tabla.add_column("C1 (25%)", justify="right")
+    tabla.add_column("C2 (50%)", justify="right")
+    tabla.add_column("C3 (75%)", justify="right")
+    tabla.add_column("Máximo", justify="right")
+
+    def agregar_fila_estadistica(nombre, lista):
+        if lista:
+            stats = np.percentile(lista, [0, 25, 50, 75, 100])
+            tabla.add_row(
+                nombre,
+                f"{stats[0]:,.2f}",
+                f"{stats[1]:,.2f}",
+                f"{stats[2]:,.2f}",
+                f"{stats[3]:,.2f}",
+                f"{stats[4]:,.2f}"
+            )
+
+    agregar_fila_estadistica("Sales", ventas_salarios)
+    agregar_fila_estadistica("Finance", finanzas_salarios)
+
+    consola.clear()
+
+    consola.print(
+        "[bold white]Set de Datos (Salarios ordenados):[/bold white]")
+
+    if ventas_salarios:
+        ventas_ordenados = sorted(ventas_salarios)
+        consola.print(f"[green]Sales:[/green] {ventas_ordenados}")
+
+    if finanzas_salarios:
+        finanzas_ordenados = sorted(finanzas_salarios)
+        consola.print(f"[blue]Finance:[/blue] {finanzas_ordenados}")
+
+    consola.print("-" * 50)
+
+    consola.print(tabla)
+
+    titulo = "BOXPLOT: COMPARATIVA FINANCE VS SALES"
     guia = (
-        "1. [bold green]Interpretación de Cajas:[/bold green] Las cajas muestran la dispersión salarial. "
-        "Si la caja es muy ancha, hay mucha diferencia de sueldos dentro del departamento.\n"
-        "2. [red]Línea Roja (Mediana):[/red] Indica el salario central. En este gráfico, parece que "
-        "Finance tiene la mediana más alta, pero Sales tiene más dispersión.\n"
-        "3. [orange1]Puntos Naranjas (Outliers):[/orange1] Son salarios excepcionalmente altos o bajos. "
-        "Por ejemplo, hay un sueldo muy alto en Finance respecto al resto de su caja.\n"
-        "4. [cyan]Comparación:[/cyan] Permite visualizar qué departamentos tienen rangos salariales "
-        "más competitivos o equitativos.\n"
-        "5. [bold]Datos Actuales:[/bold] El gráfico se basa en los departamentos con IDs "
-        f"{dept_it}, {dept_sales}, {dept_finance}."
+        "1. [bold green]Caja (IQR):[/bold green] Representa el 50% central de los empleados. "
+        "Si la caja de Sales es más larga, sus sueldos son más desiguales.\n"
+        "2. [red]Línea Media:[/red] Es la mediana. Permite ver qué departamento paga mejor 'en el centro'.\n"
+        "3. [orange1]Bigotes y Outliers:[/orange1] Muestran los rangos extremos y salarios fuera de lo normal."
     )
-
     printGuia(titulo, guia)
 
-    # --- VALIDACIÓN DE DATOS ---
-    # Si alguna lista está vacía, el gráfico falla
-    if not it_salarios and not sales_salarios and not finance_salarios:
-        print("[bold yellow]Aviso:[/bold yellow] No hay datos salariales para los departamentos seleccionados.")
+    if not ventas_salarios and not finanzas_salarios:
+        consola.print(
+            "[yellow]No hay suficientes datos para graficar.[/yellow]")
         return
-    # ---------------------------
 
-    plt.figure(figsize=(10, 6))
-    box = plt.boxplot([it_salarios, sales_salarios, finance_salarios],
-                      labels=["IT", "Sales", "Finance"],
-                      vert=False,
-                      patch_artist=True,
-                      boxprops=dict(facecolor='#4CAF50', color='black'),
-                      medianprops=dict(color='red'),
-                      whiskerprops=dict(color='black'),
-                      capprops=dict(color='black'),
-                      flierprops=dict(marker='o', markerfacecolor='orange', markersize=5))
+    plt.figure(figsize=(10, 5))
 
-    plt.title("Distribución de Salarios por Departamento",
+    plt.boxplot([ventas_salarios, finanzas_salarios],
+                labels=["Sales", "Finance"],
+                vert=False,
+                patch_artist=True,
+                boxprops=dict(facecolor='#AED6F1', color='#2E86C1'),
+                medianprops=dict(color='red', linewidth=2),
+                flierprops=dict(marker='o', markerfacecolor='orange', markersize=6))
+
+    plt.title("Distribución Salarial: Finance vs Sales",
               fontsize=14, fontweight='bold')
     plt.xlabel("Salario (USD)", fontsize=12)
-    plt.ylabel("Departamento", fontsize=12)
-    plt.grid(axis='x', linestyle='--', alpha=0.4)
+    plt.grid(axis='x', linestyle='--', alpha=0.3)
 
-    all_salaries = it_salarios + sales_salarios + finance_salarios
-    if all_salaries:
-        plt.xlim(0, max(all_salaries) * 1.1)
-
+    plt.tight_layout()
     plt.show()
+
 
 # Diagrama de Dispersión(Scatter plot)
 # Crea un gráfico de dispersión que muestra la relación entre el salario y la antigüedad de los empleados.
-
 
 def grafico_dispersion():
     conexion = get_conexion()
@@ -732,4 +965,56 @@ def grafico_dispersion():
     plt.grid(linestyle='--', alpha=0.3)
 
     plt.legend()
+    plt.show()
+
+
+def grafico_serie_tiempo():
+    conexion = get_conexion()
+    cursor = conexion.cursor()
+
+    # SQL Server: Obtenemos el gasto total por mes y año cronológicamente
+    # Esto nos permite ver si el gasto sube, baja o se estabiliza
+    query = """
+        SELECT 
+            FORMAT(hire_date, 'yyyy-MM') AS periodo,
+            SUM(salary) AS gasto_mensual
+        FROM employeess
+        WHERE hire_date IS NOT NULL
+        GROUP BY FORMAT(hire_date, 'yyyy-MM')
+        ORDER BY periodo;
+    """
+    cursor.execute(query)
+    resultados = cursor.fetchall()
+    cursor.close()
+    conexion.close()
+
+    if not resultados:
+        consola.print("[yellow]No hay datos históricos suficientes.[/yellow]")
+        return
+
+    periodos = [r[0] for r in resultados]
+    gastos = [float(r[1]) for r in resultados]
+
+    consola.clear()
+
+    titulo = "ANÁLISIS DE SERIE DE TIEMPO: GASTO MENSUAL"
+    guia = (
+        "1. [bold]Eje X (Tiempo):[/bold] Ordenado cronológicamente por Año y Mes.\n"
+        "2. [bold green]Tendencia:[/bold green] Si la línea sube, la carga financiera crece.\n"
+        "3. [bold cyan]Estacionalidad:[/bold cyan] Permite ver en qué meses de años anteriores hubo picos de inversión."
+    )
+    printGuia(titulo, guia)
+
+    plt.figure(figsize=(12, 6))
+    plt.plot(periodos, gastos, marker='o', color='#8E44AD',
+             linewidth=2, label="Gasto en Salarios")
+
+    plt.xticks(rotation=45, fontsize=8)
+    plt.title('Evolución del Gasto Salarial Histórico', fontsize=14)
+    plt.xlabel('Línea de Tiempo (Año-Mes)')
+    plt.ylabel('Dólares (USD)')
+    plt.grid(True, alpha=0.3)
+    plt.legend()
+
+    plt.tight_layout()
     plt.show()

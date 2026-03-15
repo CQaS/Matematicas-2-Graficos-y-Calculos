@@ -18,9 +18,10 @@ opciones = [
     "Histograma con rangos de valores",
     "Histograma con valores discretos",
     "Gráfico de Líneas (Un Grupo)",
-    "Gráfico de Líneas (Evolucion de contrataciones)",
+    "Gráfico de líneas (dos grupos)",
     "Boxplot (Diagrama de Cajas)",
-    "Gráfico de Dispersión (Scatter)"
+    "Gráfico de Dispersión (Scatter)",
+    "Grafico Serie de Tiempo"
 ]
 
 
@@ -79,10 +80,13 @@ def ejecutar_opcion(eleccion):
             grafico_lineas_un_grupo()
         case 10:
 
-            grafico_evolucion_contrataciones()
+            gráfico_líneas_dos_grupos()
         case 11:
 
             grafico_boxplot()
         case 12:
 
             grafico_dispersion()
+
+        case 13:
+            grafico_serie_tiempo()
